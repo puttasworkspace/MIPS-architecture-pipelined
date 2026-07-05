@@ -11,3 +11,16 @@ Basic ISA: Supports RR/RM ALU ops, Load/Store, and Branching.
 Runnable Testbench: Includes a built-in test module for immediate simulation and waveform generation (VCD).
 
 Educational Focus: Clearly documented state transitions and bug-fix notes for learning purposes.
+
+
+NEXT WORK :
+
+Single-Clock Synchronization: Migrate from the two-phase clocking scheme (clk1, clk2) to a standard single-edge synchronous design (posedge clk).
+
+Hardware Reset Integration: Implement a dedicated synchronous or asynchronous reset signal (e.g., rst_n) to safely initialize the program counter and pipeline registers, replacing testbench-driven initialization.
+
+Hazard Detection & Forwarding: Introduce data bypassing (forwarding) and pipeline stalling logic to resolve Read-After-Write (RAW) data hazards dynamically, removing the reliance on software-inserted NOPs.
+
+Harvard Architecture Migration: Separate the unified memory array into distinct Instruction Memory and Data Memory modules to eliminate structural hazards.
+
+ISA Expansion: Broaden the supported instruction set to handle more complex operations, such as J-type (jump) instructions and extended arithmetic.
