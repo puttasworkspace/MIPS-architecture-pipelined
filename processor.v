@@ -24,7 +24,6 @@ reg HALTED, TAKEN_BRANCH;
 // ─── IF Stage (clk1) ──────────────────────────────────────────────────────────
 always @(posedge clk1)
     if (HALTED == 0) begin
-        // BUG FIX #6: use EX_MEM_NPC (not EX_MEM_ALUOut) as branch target
         if (((EX_MEM_IR[31:26] == BEQZ)  && (EX_MEM_cond == 1)) ||
             ((EX_MEM_IR[31:26] == BNEQZ) && (EX_MEM_cond == 0))) begin
             IF_ID_NPC <= EX_MEM_NPC + 1;
@@ -49,7 +48,6 @@ always @(posedge clk2)
 
         $display("IF_ID_IR = %b , register %b", IF_ID_IR[25:21], register[IF_ID_IR[25:21]]);
 
-        // BUG FIX #1: use IF_ID_IR (not just-assigned ID_EX_IR — NBA issue)
         case (IF_ID_IR[31:26])
             ADD,SUB,AND,OR,SLT,MUL : ID_EX_type <= RR_ALU;
             ADDI,SUBI,SLTI         : ID_EX_type <= RM_ALU;
@@ -68,11 +66,9 @@ always @(posedge clk1)
         EX_MEM_type <= ID_EX_type;
         TAKEN_BRANCH <= 0;
 
-        // BUG FIX #2: use ID_EX_type (not just-assigned EX_MEM_type — NBA issue)
         case (ID_EX_type)
 
             RR_ALU: begin
-                // BUG FIX #3: use ID_EX_IR (not just-assigned EX_MEM_IR — NBA issue)
                 case (ID_EX_IR[31:26])
                     ADD : EX_MEM_ALUOut <= ID_EX_A + ID_EX_B;
                     SUB : EX_MEM_ALUOut <= ID_EX_A - ID_EX_B;
@@ -85,7 +81,6 @@ always @(posedge clk1)
             end
 
             RM_ALU: begin
-                // BUG FIX #3: use ID_EX_IR (not just-assigned EX_MEM_IR — NBA issue)
                 case (ID_EX_IR[31:26])
                     ADDI : EX_MEM_ALUOut <= ID_EX_A + ID_EX_Imm;
                     SUBI : EX_MEM_ALUOut <= ID_EX_A - ID_EX_Imm;
@@ -96,14 +91,12 @@ always @(posedge clk1)
 
             LOAD, STORE: begin
                 EX_MEM_ALUOut <= ID_EX_A + ID_EX_Imm;
-                // BUG FIX #4: store the SOURCE DATA register (ID_EX_B), not ID_EX_A
                 EX_MEM_B <= ID_EX_B;
             end
 
             BRANCH: begin
                 EX_MEM_NPC  <= ID_EX_NPC + ID_EX_Imm;
                 EX_MEM_cond <= (ID_EX_A == 0);
-                // BUG FIX #5: set TAKEN_BRANCH=1 when the branch condition is met
                 if ((ID_EX_IR[31:26] == BEQZ  && ID_EX_A == 0) ||
                     (ID_EX_IR[31:26] == BNEQZ && ID_EX_A != 0))
                     TAKEN_BRANCH <= 1;
@@ -132,10 +125,8 @@ always @(posedge clk1)
                 RR_ALU : register[MEM_WB_IR[15:11]] <= MEM_WB_ALUOut;
                 RM_ALU : register[MEM_WB_IR[20:16]] <= MEM_WB_ALUOut;
                 LOAD   : register[MEM_WB_IR[20:16]] <= MEM_WB_LMD;
-                // BUG FIX #7: only assert HALTED for the HALT instruction type;
-                //             STORE and BRANCH must NOT fall into a default that sets HALTED
                 HALT   : HALTED <= 1'b1;
-                default: ; // STORE / BRANCH — no register writeback, no halt
+                default: ; 
             endcase
     end
 
@@ -170,7 +161,7 @@ initial begin
     me.mem[5] = 32'h00222000;   // ADD  R4, R1, R2
     me.mem[6] = 32'h0ce77800;   // OR   R7, R7, R7  (NOP)
     me.mem[7] = 32'h00832800;   // ADD  R5, R4, R3
-    me.mem[8] = 32'hfc000000;   // HLT
+    me.mem[8] = 32'hfc000000;   // HL
 
     me.HALTED       = 0;
     me.PC           = 0;
@@ -182,7 +173,6 @@ initial begin
 end
 
 initial begin
-    // FIX: $dumpfile must come before $dumpvars
     $dumpfile("mips.vcd");
     $dumpvars(0, testbench);
     #300 $finish;
